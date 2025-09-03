@@ -5,7 +5,7 @@ using Evently.Modules.Events.Application.Abstractions.Data;
 using Evently.Modules.Events.Application.Abstractions.Messaging;
 
 namespace Evently.Modules.Events.Application.TicketTypes.GetTicketTypes;
-internal sealed class GetTicketTypesQueryHandler(IDbConnectionFactory dbConnectionFactory) : IQueryHandler<GetTicketTypesQuery, IReadOnlyCollection<TicketTypeResponse>>>
+internal sealed class GetTicketTypesQueryHandler(IDbConnectionFactory dbConnectionFactory) : IQueryHandler<GetTicketTypesQuery, IReadOnlyCollection<TicketTypeResponse>>
 {
     public async Task<Result<IReadOnlyCollection<TicketTypeResponse>>> Handle(GetTicketTypesQuery request, CancellationToken cancellationToken)
     {
