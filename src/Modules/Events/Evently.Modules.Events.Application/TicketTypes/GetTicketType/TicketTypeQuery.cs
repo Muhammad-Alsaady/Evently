@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Evently.Modules.Events.Application.Abstractions.Messaging;
 
-namespace Evently.Modules.Events.Application.TicketType.GetTicketType;
-internal class TicketTypeQuery
-{
-}
+namespace Evently.Modules.Events.Application.TicketTypes.GetTicketType;
+
+internal sealed record TicketTypeQuery(Guid TicketTypeId) : IQuery<TicketTypeResponse?>;

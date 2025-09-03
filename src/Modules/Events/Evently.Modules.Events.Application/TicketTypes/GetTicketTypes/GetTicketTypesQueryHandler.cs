@@ -3,12 +3,11 @@ using Dapper;
 using Evently.Common.Domain.ResultPattern;
 using Evently.Modules.Events.Application.Abstractions.Data;
 using Evently.Modules.Events.Application.Abstractions.Messaging;
-using Evently.Modules.Events.Domain.TicketTypes;
 
-namespace Evently.Modules.Events.Application.TicketTypes.GetTicketType;
-internal sealed class TicketTypeQueryHandler(IDbConnectionFactory dbConnectionFactory) : IQueryHandler<TicketTypeQuery, TicketTypeResponse?>
+namespace Evently.Modules.Events.Application.TicketTypes.GetTicketTypes;
+internal sealed class GetTicketTypesQueryHandler(IDbConnectionFactory dbConnectionFactory) : IQueryHandler<GetTicketTypesQuery, IReadOnlyCollection<TicketTypeResponse>>>
 {
-    public async Task<Result<TicketTypeResponse?>> Handle(TicketTypeQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyCollection<TicketTypeResponse>>> Handle(GetTicketTypesQuery request, CancellationToken cancellationToken)
     {
         await using DbConnection connection = await dbConnectionFactory.OpenConnectionAsync();
         const string sql =
@@ -25,12 +24,7 @@ internal sealed class TicketTypeQueryHandler(IDbConnectionFactory dbConnectionFa
              """;
 
 
-        TicketTypeResponse? ticketType =
-            await connection.QuerySingleOrDefaultAsync<TicketTypeResponse>(sql, request);
-        if (ticketType is null)
-        {
-            return Result.Failure<TicketTypeResponse>(TicketTypeError.NotFound(request.TicketTypeId));
-        }
+        List<TicketTypeResponse> ticketType = (await connection.QueryAsync<TicketTypeResponse>(sql, request)).AsList();
         return ticketType;
     }
 }

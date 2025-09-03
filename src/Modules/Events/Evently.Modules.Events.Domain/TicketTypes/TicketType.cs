@@ -35,9 +35,7 @@ public sealed class TicketType : Entity
         {
             return TicketTypeError.HasSamePrice;
         }
-
         Price = newPrice;
-
         AddDomainEvent(new TicketTypePriceChangedDomainEvent() { TicketTypeId = Id, NewPrice = newPrice });
         return Result.Success();
     }

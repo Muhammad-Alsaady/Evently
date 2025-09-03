@@ -15,6 +15,13 @@ internal class CreateTicketTypeCommandHandler(ITicketTypeRepository repository, 
             request.Price,
             request.Quantity);
 
+        bool isExist = await repository.ExistsAsync(request.EventId, cancellationToken);
+
+        if (isExist)
+        {
+            return Result.Failure(TicketTypeError.TicketTypeExists(request.EventId));
+        }
+
         repository.Insert(ticketType);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Success(ticketType);
