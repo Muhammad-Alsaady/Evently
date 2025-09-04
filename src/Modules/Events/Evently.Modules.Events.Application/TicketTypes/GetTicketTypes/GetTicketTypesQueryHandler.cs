@@ -1,8 +1,8 @@
 ﻿using System.Data.Common;
 using Dapper;
+using Evently.Common.Application.Data;
+using Evently.Common.Application.Messaging;
 using Evently.Common.Domain.ResultPattern;
-using Evently.Modules.Events.Application.Abstractions.Data;
-using Evently.Modules.Events.Application.Abstractions.Messaging;
 
 namespace Evently.Modules.Events.Application.TicketTypes.GetTicketTypes;
 internal sealed class GetTicketTypesQueryHandler(IDbConnectionFactory dbConnectionFactory) : IQueryHandler<GetTicketTypesQuery, IReadOnlyCollection<TicketTypeResponse>>

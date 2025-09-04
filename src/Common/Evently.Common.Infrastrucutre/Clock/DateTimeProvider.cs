@@ -1,6 +1,6 @@
 ﻿using Evently.Common.Application.Clock;
 
-namespace Evently.Modules.Events.Infrastructure.Clock;
+namespace Evently.Common.Infrastrucutre.Clock;
 internal sealed class DateTimeProvider : IDateTimeProvider
 {
     public DateTime UtcNow { get; } = DateTime.Now;

@@ -1,6 +1,6 @@
-﻿using Evently.Common.Domain.ResultPattern;
+﻿using Evently.Common.Application.Messaging;
+using Evently.Common.Domain.ResultPattern;
 using Evently.Modules.Events.Application.Abstractions.Data;
-using Evently.Modules.Events.Application.Abstractions.Messaging;
 using Evently.Modules.Events.Domain.TicketTypes;
 
 namespace Evently.Modules.Events.Application.TicketTypes.UpdateTicketTypePrice;

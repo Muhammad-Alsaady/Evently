@@ -1,5 +1,5 @@
-﻿using Evently.Common.Domain.ResultPattern;
-using Evently.Modules.Events.Application.Abstractions.Messaging;
+﻿using Evently.Common.Application.Messaging;
+using Evently.Common.Domain.ResultPattern;
 using Evently.Modules.Events.Domain.Events.Models;
 using Evently.Modules.Events.Domain.Events.Repository;
 

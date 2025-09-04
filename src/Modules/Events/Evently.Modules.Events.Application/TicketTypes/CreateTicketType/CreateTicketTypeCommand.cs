@@ -1,5 +1,5 @@
-﻿using Evently.Common.Domain.ResultPattern;
-using Evently.Modules.Events.Application.Abstractions.Messaging;
+﻿using Evently.Common.Application.Messaging;
+using Evently.Common.Domain.ResultPattern;
 
 namespace Evently.Modules.Events.Application.TicketTypes.CreateTicketType;
 public sealed record CreateTicketTypeCommand(
