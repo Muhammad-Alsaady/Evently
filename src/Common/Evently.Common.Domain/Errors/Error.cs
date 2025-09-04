@@ -4,6 +4,12 @@ public record Error(string Code, string Message, ErrorType Type)
     public static readonly Error None = new(string.Empty, string.Empty, ErrorType.Failure);
     public static readonly Error NullValue = new("General.Null", "Null value was provided", ErrorType.Failure);
 
+    public string Code { get; } = Code;
+
+    public string Message { get; } = Message;
+
+    public ErrorType Type { get; } = Type;
+
     public static Error Failure(string code, string message) => new Error(code, message, ErrorType.Failure);
     public static Error Validation(string code, string message) => new Error(code, message, ErrorType.Validation);
     public static Error NotFound(string code, string message) => new Error(code, message, ErrorType.NotFound);

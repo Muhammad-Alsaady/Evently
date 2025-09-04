@@ -4,7 +4,7 @@ using Evently.Modules.Events.Application.Abstractions.Messaging;
 using Evently.Modules.Events.Domain.TicketTypes;
 
 namespace Evently.Modules.Events.Application.TicketTypes.UpdateTicketTypePrice;
-internal class UpdateTicketTypePriceCommandHandler(ITicketTypeRepository ticketTypeRepository, IUnitOfWork unitOfWork) :
+internal sealed class UpdateTicketTypePriceCommandHandler(ITicketTypeRepository ticketTypeRepository, IUnitOfWork unitOfWork) :
     ICommandHandler<UpdateTicketTypePriceCommand>
 {
     public async Task<Result> Handle(UpdateTicketTypePriceCommand request, CancellationToken cancellationToken)

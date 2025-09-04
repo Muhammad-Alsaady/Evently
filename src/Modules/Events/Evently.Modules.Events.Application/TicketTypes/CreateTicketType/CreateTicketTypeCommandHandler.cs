@@ -4,7 +4,7 @@ using Evently.Modules.Events.Application.Abstractions.Messaging;
 using Evently.Modules.Events.Domain.TicketTypes;
 
 namespace Evently.Modules.Events.Application.TicketTypes.CreateTicketType;
-internal class CreateTicketTypeCommandHandler(ITicketTypeRepository repository, IUnitOfWork unitOfWork) : ICommandHandler<CreateTicketTypeCommand, Result>
+internal sealed class CreateTicketTypeCommandHandler(ITicketTypeRepository repository, IUnitOfWork unitOfWork) : ICommandHandler<CreateTicketTypeCommand, Result>
 {
     public async Task<Result<Result>> Handle(CreateTicketTypeCommand request, CancellationToken cancellationToken)
     {

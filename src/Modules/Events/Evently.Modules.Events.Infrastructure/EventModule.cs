@@ -1,9 +1,15 @@
 ﻿using Evently.Modules.Events.Application;
+using Evently.Modules.Events.Application.Abstractions.Clock;
 using Evently.Modules.Events.Application.Abstractions.Data;
+using Evently.Modules.Events.Domain.Category.Repository;
 using Evently.Modules.Events.Domain.Events.Repository;
+using Evently.Modules.Events.Domain.TicketTypes;
+using Evently.Modules.Events.Infrastructure.Categories;
+using Evently.Modules.Events.Infrastructure.Clock;
 using Evently.Modules.Events.Infrastructure.Data;
 using Evently.Modules.Events.Infrastructure.Database;
 using Evently.Modules.Events.Infrastructure.Events;
+using Evently.Modules.Events.Infrastructure.TicketTypes;
 using Evently.Modules.Events.Presentation.Events;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +46,12 @@ public static class EventModule
         services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<EventsDbContext>());
+        services.TryAddSingleton<IDateTimeProvider, DateTimeProvider>();
+
+
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
 
         return services;
     }

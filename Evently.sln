@@ -32,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{389461
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evently.Common.Domain", "src\Common\Evently.Common.Domain\Evently.Common.Domain.csproj", "{DCC2869A-4CAA-4CFB-BDB3-415CA183E460}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evently.Common.Application", "src\Common\Evently.Common.Application\Evently.Common.Application.csproj", "{90EA3527-B839-462E-BAE4-B399FF7B45FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +68,10 @@ Global
 		{DCC2869A-4CAA-4CFB-BDB3-415CA183E460}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DCC2869A-4CAA-4CFB-BDB3-415CA183E460}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCC2869A-4CAA-4CFB-BDB3-415CA183E460}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90EA3527-B839-462E-BAE4-B399FF7B45FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90EA3527-B839-462E-BAE4-B399FF7B45FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90EA3527-B839-462E-BAE4-B399FF7B45FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90EA3527-B839-462E-BAE4-B399FF7B45FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,5 +87,6 @@ Global
 		{74E93EBF-63A9-4DE2-8DE2-1A1721A3964D} = {CD09B010-5287-41F9-9111-69FB47A8CA5F}
 		{389461F3-B58A-4C22-BB8A-84CB00DACE9A} = {988CCC48-2B6F-4187-BF0C-484B393146B0}
 		{DCC2869A-4CAA-4CFB-BDB3-415CA183E460} = {389461F3-B58A-4C22-BB8A-84CB00DACE9A}
+		{90EA3527-B839-462E-BAE4-B399FF7B45FF} = {389461F3-B58A-4C22-BB8A-84CB00DACE9A}
 	EndGlobalSection
 EndGlobal

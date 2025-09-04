@@ -4,9 +4,9 @@ using Evently.Modules.Events.Domain.Events.Models;
 using Evently.Modules.Events.Domain.Events.Repository;
 
 namespace Evently.Modules.Events.Application.Events.PublishEvent;
-internal sealed class PublishEventCommandHandler(IEventRepository eventRepository) : ICommandHandler<PublishEventCommand, Result>
+internal sealed class PublishEventCommandHandler(IEventRepository eventRepository) : ICommandHandler<PublishEventCommand>
 {
-    public async Task<Result<Result>> Handle(PublishEventCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(PublishEventCommand request, CancellationToken cancellationToken)
     {
         Event @event = await eventRepository.GetAsync(request.EventId, cancellationToken);
         if (@event is null)

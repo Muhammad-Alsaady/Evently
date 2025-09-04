@@ -1,7 +1,9 @@
-﻿using Evently.Modules.Events.Application.Abstractions.Data;
+﻿using Evently.Common.Domain.ResultPattern;
+using Evently.Modules.Events.Application.Abstractions.Data;
 using Evently.Modules.Events.Application.Abstractions.Messaging;
-using Evently.Modules.Events.Domain.Abstractions;
-using Evently.Modules.Events.Domain.Categories;
+using Evently.Modules.Events.Domain.Category.Models;
+using Evently.Modules.Events.Domain.Category.Repository;
+
 
 namespace Evently.Modules.Events.Application.Categories.CreateCategory;
 
@@ -10,9 +12,9 @@ internal sealed class CreateCategoryCommandHandler(ICategoryRepository categoryR
 {
     public async Task<Result<Guid>> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
-        var category = Category.Create(request.Name);
+        Category category = Category.Create(request.Name);
 
-        categoryRepository.Insert(category);
+        await categoryRepository.Insert(category);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

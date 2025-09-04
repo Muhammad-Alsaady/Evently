@@ -2,7 +2,6 @@
 
 public interface ICategoryRepository
 {
-    Task<IEnumerable<Category.Models.Category>> GetAllAsync();
-    Task<Category.Models.Category> GetByIdAsync(Guid id);
-    Task AddAsync(Category.Models.Category category);
+    Task<Models.Category?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task Insert(Category.Models.Category category);
 }
