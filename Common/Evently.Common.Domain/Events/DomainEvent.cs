@@ -1,6 +1,6 @@
 namespace Evently.Common.Domain.Events;
 
-public abstract class DomainEvent : IDomainEvent
+public abstract record DomainEvent : IDomainEvent
 {
 	public Guid Id { get; init; } = Guid.NewGuid();
 
