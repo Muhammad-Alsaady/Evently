@@ -5,7 +5,7 @@ using Waseet.CQRS;
 
 namespace Evently.Modules.Ticketing.Infrastructure.EventHandlers;
 
-internal class UserRegisteredIntegrationEventHandler(IMediator mediator)
+internal sealed class UserRegisteredIntegrationEventHandler(IMediator mediator)
 	 : IEventHandler<UserRegisteredIntegrationEvent>
 {
 	public async Task HandleAsync(UserRegisteredIntegrationEvent customer, CancellationToken cancellationToken)

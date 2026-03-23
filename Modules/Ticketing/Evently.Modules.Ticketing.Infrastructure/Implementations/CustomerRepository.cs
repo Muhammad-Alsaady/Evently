@@ -3,8 +3,8 @@ using Evently.Modules.Ticketing.Infrastructure.Database;
 
 namespace Evently.Modules.Ticketing.Infrastructure.Implementations;
 
-internal class CustomerRepository(TicketingDbContext context) : ICustomerRepository
+internal sealed class CustomerRepository(TicketingDbContext context) : ICustomerRepository
 {
-	public void Insert(Customer customer, CancellationToken cancellationToken)
+	public void Insert(Customer customer)
 			=>context.Customers.Add(customer);
 }

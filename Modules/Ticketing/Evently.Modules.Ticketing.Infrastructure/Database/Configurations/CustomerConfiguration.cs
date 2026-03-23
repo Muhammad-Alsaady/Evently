@@ -1,10 +1,10 @@
-﻿using Evently.Modules.Ticketing.Domain.Customers;
+using Evently.Modules.Ticketing.Domain.Customers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Evently.Modules.Ticketing.Infrastructure.Database.Configurations;
 
-internal sealed class CustomerConfigurations : IEntityTypeConfiguration<Customer>
+internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 {
 	public void Configure(EntityTypeBuilder<Customer> builder)
 	{
@@ -15,6 +15,5 @@ internal sealed class CustomerConfigurations : IEntityTypeConfiguration<Customer
 		builder.Property(c => c.FirstName).HasMaxLength(200).IsRequired();
 		builder.Property(c => c.LastName).HasMaxLength(200).IsRequired();
 		builder.Property(c => c.Email).HasMaxLength(200).IsRequired();
-
 	}
 }
