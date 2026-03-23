@@ -23,6 +23,9 @@
         <ProjectReference Include="..\Modules\Users\Evently.Modules.Users.Features\Evently.Modules.Users.Features.csproj" />
         <ProjectReference Include="..\Modules\Users\Evently.Modules.Users.Domain\Evently.Modules.Users.Domain.csproj" />
         <ProjectReference Include="..\Modules\Users\Evently.Modules.Users.Infrastructure\Evently.Modules.Users.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modules\Events\Evently.Modules.Events.Infrastructure\Evently.Modules.Events.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modules\Events\Evently.Modules.Events.Presentation\Evently.Modules.Events.Presentation.csproj" />
+        <ProjectReference Include="..\Modules\Ticketing\Evently.Modules.Ticketing.Infrastructure\Evently.Modules.Ticketing.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>

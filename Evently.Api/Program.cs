@@ -17,9 +17,10 @@ builder.Services.AddCoreInfrastructure(builder.Configuration,
 ]);
 
 builder.Services
-    .AddUsersModule(builder.Configuration);
-    // Note: Shipments, Carriers, and Stocks modules are not implemented yet
-    // Add their module registrations here when those modules are created
+    .AddUsersModule(builder.Configuration)
+    .AddEventsModule(builder.Configuration)
+    .AddTicketingModule(builder.Configuration)
+    .RegisterApiEndpointsFromAssemblyContaining(typeof(Evently.Modules.Events.Presentation.AssemblyReference));
 
 // Seed entities in DEVELOPMENT mode
 if (builder.Environment.IsDevelopment())

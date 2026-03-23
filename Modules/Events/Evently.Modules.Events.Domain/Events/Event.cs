@@ -45,9 +45,11 @@ public sealed class Event : Entity
     public Result<Success> Publish()
     {
         if (Status != EventStatus.Draft)
-            return EventErrors.NotDraft(Id);
+		{
+			return EventErrors.NotDraft(Id);
+		}
 
-        Status = EventStatus.Published;
+		Status = EventStatus.Published;
         Raise(new EventPublishedDomainEvent(Id));
 
         return Result.Success;
@@ -56,9 +58,11 @@ public sealed class Event : Entity
     public Result<Success> Cancel()
     {
         if (Status == EventStatus.Cancelled)
-            return EventErrors.AlreadyCancelled(Id);
+		{
+			return EventErrors.AlreadyCancelled(Id);
+		}
 
-        Status = EventStatus.Cancelled;
+		Status = EventStatus.Cancelled;
         Raise(new EventCancelledDomainEvent(Id));
 
         return Result.Success;
@@ -67,9 +71,11 @@ public sealed class Event : Entity
     public Result<Success> Reschedule(DateTime startsAtUtc, DateTime? endsAtUtc)
     {
         if (Status != EventStatus.Published)
-            return EventErrors.NotPublished(Id);
+		{
+			return EventErrors.NotPublished(Id);
+		}
 
-        StartsAtUtc = startsAtUtc;
+		StartsAtUtc = startsAtUtc;
         EndsAtUtc = endsAtUtc;
         Raise(new EventRescheduledDomainEvent(Id, startsAtUtc, endsAtUtc));
 

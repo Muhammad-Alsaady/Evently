@@ -9,6 +9,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Common\Evently.Common.Application\Evently.Common.Application.csproj" />
     <ProjectReference Include="..\Evently.Modules.Events.Domain\Evently.Modules.Events.Domain.csproj" />
+    <ProjectReference Include="..\Evently.Modules.Events.PublicApi\Evently.Modules.Events.PublicApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" />
   </ItemGroup>
 
 </Project>

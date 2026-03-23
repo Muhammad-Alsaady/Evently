@@ -6,7 +6,7 @@ using Evently.Common.Domain.Events;
 
 namespace Evently.Common.Infrastructure.Interceptors;
 
-internal sealed class PublishDomainEventsInterceptor(IServiceScopeFactory serviceScopeFactory) : SaveChangesInterceptor
+public sealed class PublishDomainEventsInterceptor(IServiceScopeFactory serviceScopeFactory) : SaveChangesInterceptor
 {
 	public override async ValueTask<int> SavedChangesAsync(
 		  SaveChangesCompletedEventData eventData,
