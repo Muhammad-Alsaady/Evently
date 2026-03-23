@@ -36,7 +36,7 @@ public class EventPublisher(IServiceProvider serviceProvider, ILogger<EventPubli
             var handlers = serviceProvider.GetServices<IEventHandler<TEvent>>().ToArray();
 
             if (handlers.Length == 0)
-            {
+            {	
                 logger.LogDebug("No handlers registered for event {EventType}", eventType.Name);
                 return;
             }

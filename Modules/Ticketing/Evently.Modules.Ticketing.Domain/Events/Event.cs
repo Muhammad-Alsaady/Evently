@@ -1,4 +1,5 @@
 using Evently.Common.Domain;
+using Evently.Common.Domain.Results;
 
 namespace Evently.Modules.Ticketing.Domain.Events;
 
@@ -12,8 +13,9 @@ public sealed class Event : Entity
     public string? Location { get; private set; }
     public DateTime StartsAtUtc { get; private set; }
     public DateTime? EndsAtUtc { get; private set; }
+	public bool IsCancelled { get; private set; }
 
-    private Event() { }
+	private Event() { }
 
     public static Event Create(
         Guid id,
@@ -33,4 +35,14 @@ public sealed class Event : Entity
             EndsAtUtc = endsAtUtc
         };
     }
+
+	public Result<Success> Cancel()
+	{
+		if (IsCancelled)
+		{
+			return EventErrors.AlreadyCancelled(Id);
+		}
+		IsCancelled = true;
+		return Result.Success;
+	}
 }

@@ -219,3 +219,69 @@ A:
 
 **Q: Why doesn't Ticketing have a `PublishDomainEventsInterceptor` registered? Won't that cause issues?**
 A: The interceptor IS registered in Ticketing — it's `AddSingleton<PublishDomainEventsInterceptor>()` in `TicketingModuleExtensions.AddDatabase()`. But the Ticketing `Event` entity has no domain events (it's a read model, not an aggregate that does business logic). So the interceptor will fire on `TicketingDbContext.SaveChanges` but find zero domain events and do nothing. The interceptor is registered defensively — if we later add domain events to Ticketing aggregates (e.g., `CustomerCreatedDomainEvent`), it'll work automatically.
+
+---
+
+## Why Ticketing Mirrors the Event Entity (Local Read Model, Decoupling, DDD)
+
+**Q: Ticketing already knows the EventId. Why does it need to store Title, Location, StartsAtUtc locally? Can't it just call `IEventsApi.GetAsync(eventId)` whenever it needs those fields?**
+A: It *can*, but it shouldn't rely on it for every read. If Ticketing calls `IEventsApi.GetAsync()` for every order confirmation and receipt, it creates **runtime coupling** — Ticketing's availability depends on Events module working correctly. If Events is slow, buggy, or later moved to a separate service, Ticketing breaks too. The mirror says: "I only need your data once — when you publish. After that, I own my copy."
+
+**Q: But if Events updates the event title later, Ticketing's copy becomes stale. Isn't that a problem?**
+A: This is the core DDD trade-off called **eventual consistency** vs **strong consistency**. In DDD, each Bounded Context owns its data. Ticketing's `Event` represents *"the event as it was when tickets went on sale"* — a valid business fact. If the event is rescheduled, Events fires `EventRescheduledIntegrationEvent` and Ticketing updates its copy. The rule is: **stale data is acceptable if the business accepts it**. If staleness matters, handle it with another integration event — not by making Ticketing query Events at runtime.
+
+**Q: What DDD concept does this mirror implement exactly?**
+A: It's a **Local Read Model** inside a Bounded Context. `events.events` is the authoritative model — it has all the business rules and state transitions. `ticketing.events` is a **projection** — a simplified, denormalized snapshot of what Ticketing needs to do its job. Ticketing doesn't need `CategoryId`, `Status`, or any Events-domain concept. Its shape is driven by Ticketing's own needs.
+
+**Q: The Ticketing `Event` class has no business logic right now. Is it really a DDD entity or just a database row?**
+A: Right now it's closer to a Value Snapshot. But that's intentional — it starts minimal and gains behavior as Ticketing grows: `Cancel()` blocks new ticket sales, `Reschedule()` updates dates, `SoldOut()` tracks capacity. Each of those behaviors lives in Ticketing's entity, driven by Ticketing's business rules — not Events'. The model's shape and behavior are driven by the context it lives in, not by another module's model.
+
+**Q: What is a Bounded Context, and how does the mirror pattern enforce the boundary?**
+A: A Bounded Context is a boundary within which a model has a specific, consistent meaning. The word "Event" means two different things:
+- Events module: a thing being organized — has status, categories, ticket types, lifecycle rules
+- Ticketing module: a reference to what a ticket is for — has display info, dates, and availability state
+
+Without the mirror, if Ticketing referenced `Events.Domain.Event` directly: a column rename in Events breaks Ticketing's queries, Events' business rules leak into Ticketing, and both modules must be deployed together. The mirror enforces the boundary: **Ticketing only knows what Events chose to announce publicly** via the integration event contract.
+
+**Q: When should a module mirror data vs call another module's API?**
+A: Mirror when the data is needed on every read (orders, receipts, ticket display) — calling an API for every read is too slow and creates runtime coupling. Call the API when data is needed only for rare one-time validation (e.g., "does this EventId exist before I create a ticket?"). Mirror + handle update events when the data can change after the initial sync. Never mirror when the data must always be real-time accurate.
+
+---
+
+## Guided Feature: EventCancelled Cross-Module Integration
+
+### What we built and why
+
+We implemented the full chain for propagating an event cancellation from the Events module into the Ticketing module. This is the same pattern as EventPublished but with an important difference: instead of *creating* data in Ticketing, we're *updating* existing data — which introduced new concerns.
+
+**The chain:**
+```
+POST events/{id}/cancel
+  → CancelEventCommandHandler (Events.Application)
+  → event.Cancel() raises EventCancelledDomainEvent
+  → SaveChanges() triggers PublishDomainEventsInterceptor
+  → EventCancelledDomainEventHandler (Events.Application)
+  → EventCancelledIntegrationEvent (Events.PublicApi)
+  → EventCancelledIntegrationEventHandler (Ticketing.Infrastructure)
+  → CancelEventCommand → CancelEventCommandHandler (Ticketing.Application)
+  → ticketing.Event.Cancel() → SaveChanges()
+```
+
+**Q: Why does `EventCancelledDomainEventHandler` NOT query the repository, while `EventPublishedDomainEventHandler` does?**
+A: Because the contracts are different. `EventPublishedIntegrationEvent` carries the full event details (Title, Location, StartsAtUtc etc.) — data that only exists in `events.events`. The domain event only carries `EventId`, so the handler must query to get the rest. `EventCancelledIntegrationEvent` only carries `EventId` — which is already on the domain event. No query needed. The rule: only do the extra work (repository call) when the integration event contract requires data you don't already have.
+
+**Q: Why does `CancelEventCommand` need to be `public` when `CreateEventCommandHandler` is `internal`?**
+A: The command is constructed in Ticketing.Infrastructure (inside `EventCancelledIntegrationEventHandler`) and consumed by a handler in Ticketing.Application — two different assemblies. `internal` types are invisible outside their assembly. The handler can be `internal sealed` because IMediator resolves it via reflection at runtime (it doesn't need to reference the type by name). But the command is constructed by name with `new CancelEventCommand(...)`, so it must be `public`.
+
+**Q: Why does `CancelEventCommandHandler` check the `Cancel()` result before saving?**
+A: Because `Cancel()` can return an error — specifically `EventErrors.AlreadyCancelled`. If we called `SaveChanges()` without checking, EF would try to persist a no-op (the entity didn't change) and the caller would get `200 OK` on a double-cancel instead of a `409 Conflict`. The pattern is always: call domain method → check result → only persist if success.
+
+**Q: Why does `Ticketing.Domain.Event` have `IsCancelled` (a bool flag) rather than a `Status` enum like Events.Domain.Event?**
+A: Because Ticketing's model is shaped by Ticketing's needs, not Events'. Ticketing only cares about one question: "can I sell tickets for this event?" A bool is the simplest representation of that. Events.Domain needs a full status enum (`Draft`, `Published`, `Cancelled`) because it manages the event lifecycle. Ticketing doesn't manage the lifecycle — it just reacts to it. Simpler model = less code to maintain.
+
+**Q: What does `sealed` on a class give us, and why does it matter for handlers?**
+A: `sealed` tells the compiler and JIT that no subclass exists. For handlers, this means:
+1. The class is never meant to be extended — it's a single-purpose implementation.
+2. The JIT can devirtualize method calls on sealed types, giving a minor performance benefit.
+3. It signals intent to the reader: "this is a leaf class, don't inherit from it."
+All command handlers and event handlers in this codebase should be `sealed` by convention.
