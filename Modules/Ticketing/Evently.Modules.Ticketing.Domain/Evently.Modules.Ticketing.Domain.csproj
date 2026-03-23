@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Orders\kvdw3hlq.ggu~" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Common\Evently.Common.Domain\Evently.Common.Domain.csproj" />
   </ItemGroup>
 

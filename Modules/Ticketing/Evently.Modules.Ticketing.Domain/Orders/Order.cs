@@ -28,15 +28,14 @@ public sealed class Order : Entity
 			EventId = eventId,
 		};
 
-		order.Raise(new OrderCreateDomainEvent(order.Id));
+		order.Raise(new OrderCreatedDomainEvent(order.Id));
 		return order;
 	}
 
-	public static OrderItem AddItem(Guid ticketTypeId, int quantity, decimal price)
+	public void AddItem(Guid ticketTypeId, int quantity, decimal price)
 	{
-
-		OrderItem.Create(Guid.NewGuid(), Id, ticketTypeId, quantity, price);
+		var orderItem = OrderItem.Create(Guid.NewGuid(), Id, ticketTypeId, quantity, price);
 		OrderItems.Add(orderItem);
-		return orderItem;
+		TotalPrice += price * quantity;
 	}
 }

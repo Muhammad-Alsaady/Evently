@@ -4,9 +4,9 @@ public sealed class OrderItem
 {
 	public Guid Id { get; private set; }
 	public Guid OrderId { get; private set; }
-	public Guid TicketTypeId { get; set; }
-	public int Quantity { get; set; }
-	public decimal Price { get; set; }
+	public Guid TicketTypeId { get; private set; }
+	public int Quantity { get; private set; }
+	public decimal Price { get; private set; }
 	private OrderItem()
 	{
 	}
