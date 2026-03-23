@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Common\Evently.Common.Application\Evently.Common.Application.csproj" />
     <ProjectReference Include="..\Evently.Modules.Ticketing.Domain\Evently.Modules.Ticketing.Domain.csproj" />
+    <ProjectReference Include="..\Evently.Modules.Ticketing.PublicApi\Evently.Modules.Ticketing.PublicApi.csproj" />
   </ItemGroup>
 
 </Project>

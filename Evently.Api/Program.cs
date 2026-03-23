@@ -20,7 +20,8 @@ builder.Services
     .AddUsersModule(builder.Configuration)
     .AddEventsModule(builder.Configuration)
     .AddTicketingModule(builder.Configuration)
-    .RegisterApiEndpointsFromAssemblyContaining(typeof(Evently.Modules.Events.Presentation.AssemblyReference));
+    .RegisterApiEndpointsFromAssemblyContaining(typeof(Evently.Modules.Events.Presentation.AssemblyReference))
+    .RegisterApiEndpointsFromAssemblyContaining(typeof(Evently.Modules.Ticketing.Presentation.AssemblyReference));
 
 // Seed entities in DEVELOPMENT mode
 if (builder.Environment.IsDevelopment())

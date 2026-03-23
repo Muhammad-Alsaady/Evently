@@ -1,4 +1,4 @@
-﻿using Evently.Common.Application.Messaging;
+using Evently.Common.Application.Messaging;
 using Evently.Common.Domain.Results;
 using Evently.Modules.Ticketing.Application.Abstractions.Data;
 using Evently.Modules.Ticketing.Domain.Customers;
@@ -11,9 +11,9 @@ internal sealed class CreateOrderCommandHandler(
 	ICustomerRepository customerRepository,
 	ITicketTypeRepository ticketTypeRepository,
 	IOrderRepository orderRepository,
-	IUnitOfWork unitOfWork) : ICommandHandler<CreateOrderCommand>
+	IUnitOfWork unitOfWork) : ICommandHandler<CreateOrderCommand, Guid>
 {
-	public async Task<Result<Success>> Handle(CreateOrderCommand request, CancellationToken cancellationToken = default)
+	public async Task<Result<Guid>> Handle(CreateOrderCommand request, CancellationToken cancellationToken = default)
 	{
 		var customer = await customerRepository.GetAsync(request.CustomerId);
 		if (customer is null)
@@ -33,6 +33,6 @@ internal sealed class CreateOrderCommandHandler(
 		orderRepository.Insert(order);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
-		return Result.Success;
+		return order.Id;
 	}
 }
