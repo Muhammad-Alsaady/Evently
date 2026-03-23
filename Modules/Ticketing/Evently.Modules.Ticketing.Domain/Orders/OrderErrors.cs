@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Evently.Common.Domain.Errors;
 
 namespace Evently.Modules.Ticketing.Domain.Orders;
 
-internal class OrderErrors
+public sealed class OrderErrors
 {
+	public static Error NotFound(Guid id) =>
+	   Error.NotFound("Ticketing.Order.NotFound", $"Order with ID '{id}' was not found.");
 }

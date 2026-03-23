@@ -5,5 +5,8 @@ namespace Evently.Modules.Ticketing.Infrastructure.Implementations;
 
 internal sealed class TicketTypeRepository(TicketingDbContext context) : ITicketTypeRepository
 {
-    public void Insert(TicketType ticketType) => context.TicketTypes.Add(ticketType);
+	public async Task<TicketType?> GetAsync(Guid id)
+		=> await context.TicketTypes.FindAsync(id);
+
+	public void Insert(TicketType ticketType) => context.TicketTypes.Add(ticketType);
 }

@@ -19,7 +19,7 @@ public sealed class Order : Entity
 		
 	}
 
-	public static Order create(Guid id, Guid customerId, Guid eventId)
+	public static Order Create(Guid id, Guid customerId, Guid eventId)
 	{
 		var order = new Order
 		{
