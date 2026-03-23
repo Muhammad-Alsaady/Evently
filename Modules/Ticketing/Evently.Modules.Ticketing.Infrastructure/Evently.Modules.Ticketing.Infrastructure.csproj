@@ -9,16 +9,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Common\Evently.Common.Infrastructure\Evently.Common.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Events\Evently.Modules.Events.PublicApi\Evently.Modules.Events.PublicApi.csproj" />
+    <ProjectReference Include="..\..\Users\Evently.Modules.Users.PublicApi\Evently.Modules.Users.PublicApi.csproj" />
     <ProjectReference Include="..\Evently.Modules.Ticketing.Application\Evently.Modules.Ticketing.Application.csproj" />
     <ProjectReference Include="..\Evently.Modules.Ticketing.Domain\Evently.Modules.Ticketing.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="EFCore.NamingConventions" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Waseet.CQRS" />
   </ItemGroup>
 
 </Project>

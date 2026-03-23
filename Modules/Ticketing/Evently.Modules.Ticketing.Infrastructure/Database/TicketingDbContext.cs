@@ -1,3 +1,4 @@
+using Evently.Modules.Ticketing.Domain.Customers;
 using Evently.Modules.Ticketing.Domain.Events;
 using Evently.Modules.Ticketing.Domain.TicketTypes;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,8 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
 {
     public DbSet<Event> Events { get; set; } = null!;
     public DbSet<TicketType> TicketTypes { get; set; } = null!;
+    public DbSet<Customer> Customers { get; set; } = null!;
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
