@@ -1,4 +1,5 @@
 using Evently.Modules.Ticketing.Domain.Events;
+using Evently.Modules.Ticketing.Domain.TicketTypes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Evently.Modules.Ticketing.Infrastructure.Database;
@@ -6,6 +7,7 @@ namespace Evently.Modules.Ticketing.Infrastructure.Database;
 public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> options) : DbContext(options)
 {
     public DbSet<Event> Events { get; set; } = null!;
+    public DbSet<TicketType> TicketTypes { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

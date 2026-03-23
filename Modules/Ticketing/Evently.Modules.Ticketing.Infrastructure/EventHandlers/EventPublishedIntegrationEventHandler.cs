@@ -17,7 +17,10 @@ internal sealed class EventPublishedIntegrationEventHandler(IMediator mediator)
                 integrationEvent.Description,
                 integrationEvent.Location,
                 integrationEvent.StartsAtUtc,
-                integrationEvent.EndsAtUtc),
+                integrationEvent.EndsAtUtc,
+                integrationEvent.TicketTypes
+                    .Select(t => new TicketTypeDto(t.TicketTypeId, t.Name, t.Price, t.Quantity))
+                    .ToList()),
             cancellationToken);
     }
 }

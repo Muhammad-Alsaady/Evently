@@ -8,4 +8,11 @@ public sealed record CreateEventCommand(
     string Description,
     string? Location,
     DateTime StartsAtUtc,
-    DateTime? EndsAtUtc) : ICommand;
+    DateTime? EndsAtUtc,
+    IReadOnlyList<TicketTypeDto> TicketTypes) : ICommand;
+
+public sealed record TicketTypeDto(
+    Guid TicketTypeId,
+    string Name,
+    decimal Price,
+    int Quantity);

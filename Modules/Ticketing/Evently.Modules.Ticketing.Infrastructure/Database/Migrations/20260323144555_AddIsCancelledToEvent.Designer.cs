@@ -3,6 +3,7 @@ using System;
 using Evently.Modules.Ticketing.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Evently.Modules.Ticketing.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(TicketingDbContext))]
-    partial class TicketingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260323144555_AddIsCancelledToEvent")]
+    partial class AddIsCancelledToEvent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,50 +66,6 @@ namespace Evently.Modules.Ticketing.Infrastructure.Database.Migrations
                         .HasName("pk_events");
 
                     b.ToTable("events", "ticketing");
-                });
-
-            modelBuilder.Entity("Evently.Modules.Ticketing.Domain.TicketTypes.TicketType", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric(10,2)")
-                        .HasColumnName("price");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity");
-
-                    b.HasKey("Id")
-                        .HasName("pk_ticket_types");
-
-                    b.HasIndex("EventId")
-                        .HasDatabaseName("ix_ticket_types_event_id");
-
-                    b.ToTable("ticket_types", "ticketing");
-                });
-
-            modelBuilder.Entity("Evently.Modules.Ticketing.Domain.TicketTypes.TicketType", b =>
-                {
-                    b.HasOne("Evently.Modules.Ticketing.Domain.Events.Event", null)
-                        .WithMany()
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_ticket_types_events_event_id");
                 });
 #pragma warning restore 612, 618
         }

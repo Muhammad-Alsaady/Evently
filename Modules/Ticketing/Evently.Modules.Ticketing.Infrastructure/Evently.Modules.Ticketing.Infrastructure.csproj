@@ -13,4 +13,12 @@
     <ProjectReference Include="..\Evently.Modules.Ticketing.Domain\Evently.Modules.Ticketing.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Waseet.CQRS" />
+  </ItemGroup>
+
 </Project>

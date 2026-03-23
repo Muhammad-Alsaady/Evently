@@ -6,6 +6,7 @@ using Evently.Common.Infrastructure.Interceptors;
 using Evently.Modules.Ticketing.Application;
 using Evently.Modules.Ticketing.Application.Abstractions.Data;
 using Evently.Modules.Ticketing.Domain.Events;
+using Evently.Modules.Ticketing.Domain.TicketTypes;
 using Evently.Modules.Ticketing.Infrastructure.Database;
 using Evently.Modules.Ticketing.Infrastructure.EventHandlers;
 using Evently.Modules.Ticketing.Infrastructure.Implementations;
@@ -66,6 +67,7 @@ public static class TicketingModuleExtensions
     private static void AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
     }
 }

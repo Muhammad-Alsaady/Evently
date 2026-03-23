@@ -1,4 +1,3 @@
-
 using Evently.Common.Domain.Events;
 
 namespace Evently.Modules.Events.PublicApi;
@@ -9,4 +8,12 @@ public sealed record EventPublishedIntegrationEvent(
     string Description,
     string? Location,
     DateTime StartsAtUtc,
-    DateTime? EndsAtUtc) : IEvent;
+    DateTime? EndsAtUtc,
+    IReadOnlyList<TicketTypeRecord> TicketTypes) : IEvent;
+
+public sealed record TicketTypeRecord(
+    Guid TicketTypeId,
+    Guid EventId,
+    string Name,
+    decimal Price,
+    int Quantity);
