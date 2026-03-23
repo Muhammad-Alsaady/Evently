@@ -1,41 +1,69 @@
 services:
-  shipping-modular-monolith:
-    image: shipping-modular-monolith
-    container_name: shipping-modular-monolith
+  evently-api:
+    image: evently-api
+    container_name: evently-api
     build:
       context: .
-      dockerfile: ./ModularMonolith.Host/Dockerfile
+      dockerfile: ./Evently.Api/Dockerfile
     ports:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_EXPORTER_OTLP_HEADERS=X-Seq-ApiKey=abcde12345
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - seq
     restart: always
     networks:
-      - docker-web
+      - evently-network
 
   postgres:
     image: postgres:latest
     container_name: postgres
     environment:
-      - TZ
-      - POSTGRES_USER=admin 
+      - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=modular_monolith
+      - POSTGRES_DB=evently
     volumes:
       - ./docker_data/pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: always
     networks:
-      - docker-web
-      
-  seq:
-    image: datalust/seq:2024.3
-    container_name: seq
+      - evently-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker_data/redis:/data
     restart: always
+    networks:
+      - evently-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./docker_data/rabbitmq:/var/lib/rabbitmq
+    restart: always
+    networks:
+      - evently-network
+
+  seq:
+    image: datalust/seq:latest
+    container_name: seq
     environment:
       - ACCEPT_EULA=Y
     volumes:
@@ -43,21 +71,21 @@ services:
     ports:
       - "5341:5341"
       - "8081:80"
+    restart: always
     networks:
-      - docker-web
+      - evently-network
 
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     restart: always
     ports:
-      - 4317:4317
-      - 4318:4318
-      - 16686:16686
+      - "4317:4317"
+      - "4318:4318"
+      - "16686:16686"
     networks:
-        - docker-web
-    
+      - evently-network
 
 networks:
-  docker-web:
+  evently-network:
     driver: bridge
