@@ -1,15 +1,15 @@
 using System.Buffers;
 using System.Text.Json;
+using Evently.Common.Application.Caching;
 using Microsoft.Extensions.Caching.Distributed;
-using Evently.Common.Application.Cashing;
 
-namespace Evently.Common.Infrastructure.Cashing;
-public class CashService(IDistributedCache cache) : ICacheService
+namespace Evently.Common.Infrastructure.Caching;
+
+public sealed class CacheService(IDistributedCache cache) : ICacheService
 {
 	public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
 	{
 		var bytes = await cache.GetAsync(key, cancellationToken);
-
 		return bytes is null ? default : Deserialize<T>(bytes);
 	}
 
@@ -20,17 +20,14 @@ public class CashService(IDistributedCache cache) : ICacheService
 		CancellationToken cancellationToken = default)
 	{
 		var bytes = Serialize(value);
-
 		return cache.SetAsync(key, bytes, CacheOptions.Create(expiration), cancellationToken);
 	}
 
 	public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
 		cache.RemoveAsync(key, cancellationToken);
 
-	private static T Deserialize<T>(byte[] bytes)
-	{
-		return JsonSerializer.Deserialize<T>(bytes)!;
-	}
+	private static T Deserialize<T>(byte[] bytes) =>
+		JsonSerializer.Deserialize<T>(bytes)!;
 
 	private static byte[] Serialize<T>(T value)
 	{

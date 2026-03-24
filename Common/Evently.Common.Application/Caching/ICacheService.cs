@@ -1,4 +1,5 @@
-namespace Evently.Common.Application.Cashing;
+namespace Evently.Common.Application.Caching;
+
 public interface ICacheService
 {
 	Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);

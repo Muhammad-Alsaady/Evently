@@ -1,5 +1,6 @@
-using Waseet.CQRS;
 using Evently.Common.Application.Behavoirs;
+using Waseet.CQRS;
+using Waseet.CQRS.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,9 @@ public static class ApplicationBehaviorsExtensions
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlingPipelineBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestLoggingPipelineBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+
+        services.AddWaseetCaching();
+        services.AddWaseetIdempotency();
 
         return services;
     }

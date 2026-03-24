@@ -1,13 +1,15 @@
 using System.Text;
+using Evently.Common.Application.Caching;
+using Evently.Common.Application.Data;
+using Evently.Common.Infrastructure.Caching;
+using Evently.Common.Infrastructure.Configuration;
+using Evently.Common.Infrastructure.Data;
+using Evently.Common.Infrastructure.Policies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Evently.Common.Application.Data;
-using Evently.Common.Infrastructure.Configuration;
-using Evently.Common.Infrastructure.Data;
-using Evently.Common.Infrastructure.Policies;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -22,7 +24,7 @@ public static class DependencyInjection
         IConfiguration configuration,
         string[] activityModuleNames)
     {
-        services.AddMemoryCache();
+        services.AddRedisCache(configuration);
 
         services.AddHostOpenTelemetry(activityModuleNames);
 
@@ -95,6 +97,17 @@ public static class DependencyInjection
 
         return services;
     }
+
+	private static IServiceCollection AddRedisCache(this IServiceCollection services, IConfiguration configuration)
+	{
+		var connectionString = configuration.GetConnectionString("Cache")
+			?? throw new InvalidOperationException("Connection string 'Cache' is not configured.");
+
+		services.AddStackExchangeRedisCache(options => options.Configuration = connectionString);
+		services.AddScoped<ICacheService, CacheService>();
+
+		return services;
+	}
 
 	private static IServiceCollection AddDbConnectionFactory(this IServiceCollection services, IConfiguration configuration)
 	{
