@@ -285,3 +285,156 @@ A: `sealed` tells the compiler and JIT that no subclass exists. For handlers, th
 2. The JIT can devirtualize method calls on sealed types, giving a minor performance benefit.
 3. It signals intent to the reader: "this is a leaf class, don't inherit from it."
 All command handlers and event handlers in this codebase should be `sealed` by convention.
+
+---
+
+## Phase 3 — Infrastructure Concerns
+
+---
+
+## Serilog + Seq
+
+**Q: What is structured logging, and why is it better than plain text logging?**
+A: Plain text logging writes human-readable strings: `"User 123 placed order 456"`. Structured logging writes events as data: `{ "UserId": 123, "OrderId": 456, "Event": "OrderPlaced" }`. The difference matters when you need to query logs. With plain text you can only search by string pattern — fragile and slow. With structured logs you can run real queries: "show me all orders placed by UserId 123 in the last hour where TotalPrice > 100". Seq is a log server that accepts structured events and lets you run exactly these queries. In a modular monolith with multiple modules and background workers all writing logs, the ability to filter by `Module`, `RequestId`, or `OrderId` is the difference between debugging in 5 minutes vs 5 hours.
+
+**Q: What is Serilog and how does it work in this project?**
+A: Serilog is a .NET structured logging library. Instead of `ILogger.LogInformation("msg")` writing a raw string, Serilog captures the message template and property values separately: `Log.Information("Order {OrderId} created for {CustomerId}", orderId, customerId)` stores `OrderId` and `CustomerId` as searchable properties on the log event. In this project, `appsettings.json` configures two sinks (output targets): Console (for local development) and Seq (for structured query). The `Enrich` section adds automatic properties to every event: `MachineName` (which server), `ThreadId` (useful for async debugging), and `FromLogContext` (lets you push extra properties with `LogContext.PushProperty`). The `AddCoreHostLogging()` call in `Program.cs` reads this config and wires Serilog as the default `ILogger` provider.
+
+**Q: What are Serilog enrichers and why do we use them?**
+A: Enrichers automatically attach extra properties to every log event without you having to pass them manually. `WithMachineName` adds the server hostname — essential when running multiple instances. `WithThreadId` adds the OS thread ID — helps trace async operations across thread switches. `FromLogContext` enables scoped enrichment: when a request comes in, you push `RequestId`, `UserId`, and `Module` onto the context once, and every log written during that request automatically carries those properties. Without enrichers, you'd have to manually pass these fields to every single log call.
+
+**Q: Why does Seq run separately as a Docker container instead of writing logs to a file?**
+A: Log files have three problems: they're hard to query, they don't survive container restarts unless mounted to a volume, and in a multi-instance deployment each instance writes its own file. Seq solves all three: it's a centralized server that receives structured events over HTTP, stores them in a queryable database, and serves a web UI. In production you'd use a hosted service or a more scalable solution, but for local development and small deployments, Seq in Docker gives you everything: persistence (via `/data` volume mount), real-time streaming, and query power — all on port 8081 in the browser.
+
+**Q: What is the `MinimumLevel` config and why is `Microsoft` overridden to `Information`?**
+A: `MinimumLevel.Default: Debug` means our application code logs everything from Debug upward. But ASP.NET Core and EF Core (both under the `Microsoft` namespace) emit enormous amounts of Debug noise — every route matched, every SQL query parameterized, every DI scope opened. Overriding `Microsoft` to `Information` silences that noise while keeping our own Debug logs. This is a standard pattern: keep your own code verbose, silence framework internals.
+
+**Q: How does Serilog improve performance, scalability, and observability in this project and in general?**
+A:
+- **Performance**: Serilog uses asynchronous, buffered sinks. The `Seq` sink batches log events and flushes them in the background — the calling thread is not blocked waiting for the log server to respond. Compared to synchronous file-writing loggers (like `log4net` in blocking mode), this means logging has near-zero impact on request latency. Destructuring (capturing structured properties) is also faster than string interpolation because no string is built unless the event actually passes the minimum level filter.
+- **Scalability**: When you run multiple API instances (horizontal scaling), all instances send their structured logs to the single Seq container. Instead of SSH-ing into 5 servers to read 5 separate log files, you have one centralized query interface. Adding a new instance requires zero logging configuration — it just starts sending to Seq.
+- **Observability**: By enriching every log event with `MachineName`, `RequestId`, `Module`, and `UserId`, you can trace a single user's order flow across all modules and background workers in one Seq query — even when that request touched the Events module, the Ticketing module, and the Outbox processor. Without structured enrichment, correlating logs across modules at scale is practically impossible.
+- **In other projects**: Any system with more than one service or more than one instance benefits the same way. Microservices especially need centralized structured logging — a distributed trace that spans 5 services is only reconstructible if every service enriches its logs with the same correlation ID.
+
+---
+
+## Redis Caching
+
+**Q: What is the difference between in-memory cache and distributed cache (Redis)?**
+A: In-memory cache (`IMemoryCache`) stores data in the process's RAM. It's fast (no network hop) but has two critical limitations: it's per-process (if you run two API instances, each has its own cache — a cache miss on one instance isn't a hit on the other), and it's lost on restart (a deploy wipes the cache). Redis is a distributed cache: it runs as a separate server that all API instances connect to. Any instance that caches a value makes it available to all others. Redis persists to disk, so a restart doesn't flush it. In this project, `AddMemoryCache()` was a placeholder. For a real deployment, Redis behind `IDistributedCache` is the correct choice.
+
+**Q: How does `ICacheService` / `CacheService` work in this project?**
+A: `ICacheService` is defined in `Common.Application` — a thin abstraction with `GetAsync<T>`, `SetAsync<T>`, and `RemoveAsync`. The `CacheService` implementation in `Common.Infrastructure` wraps `IDistributedCache` (the ASP.NET Core abstraction). `IDistributedCache` is backed by Redis via `AddStackExchangeRedisCache`. The cache stores values as `byte[]` — `CacheService` handles serialization to/from JSON using `System.Text.Json`. The key design: Application layer (query handlers) depends only on `ICacheService` — it never knows whether the backend is Redis, in-memory, or a file. Swapping backends means changing one DI registration in Infrastructure.
+
+**Q: What should be cached and what shouldn't?**
+A: Cache read-heavy, rarely-changing data: event details, category lists, ticket type prices. Don't cache: user-specific data without a per-user key, data that changes on every write (cart totals), or data where staleness is unacceptable (inventory counts). The pattern in query handlers is cache-aside: check cache first → if miss, query DB → store in cache → return result. On write (command handler), invalidate the relevant cache key so the next read fetches fresh data.
+
+**Q: What is a cache key strategy and why does it matter?**
+A: A cache key uniquely identifies a cached value. Bad keys cause bugs: if `GetEventAsync(eventId1)` and `GetEventAsync(eventId2)` both cache under key `"event"`, they overwrite each other. Good keys embed all parameters: `$"events:{eventId}"`, `$"tickettypes:event:{eventId}"`. In a modular monolith with multiple modules, prefix with the module name to avoid collisions: `"ticketing:event:123"` vs `"events:event:123"` are different cached values for the same entity ID but from different modules (different read models). The `CacheOptions` class sets expiration — short for volatile data (1 minute), longer for stable data (1 hour).
+
+**Q: Why is the class named `CashService` in the codebase?**
+A: It's a typo — it should be `CacheService`. This is a naming bug carried over from the template. It doesn't affect functionality since DI resolves by interface (`ICacheService`), but it should be renamed to `CacheService` for clarity. We'll fix it when we wire up Redis properly in P3-2.
+
+**Q: How does Redis improve performance and scalability in this project and in general?**
+A:
+- **Performance — this project**: Every `GET /events/{id}` query currently hits PostgreSQL. With caching, the first request queries the DB and stores the result in Redis (e.g., for 5 minutes). Every subsequent request for the same event in that window returns the cached result in ~1ms (Redis is an in-memory key-value store) instead of ~20–50ms for a DB round-trip. Under load — say 500 users all viewing the same popular event — that's 499 DB queries eliminated per cache window. Read-heavy endpoints (event listings, ticket type prices) benefit most.
+- **Performance — DB protection**: Redis acts as a shield in front of PostgreSQL. Without caching, a traffic spike (e.g., a popular event goes on sale) sends thousands of identical queries to the DB simultaneously — the DB saturates, latency spikes, requests time out. With Redis, those identical queries are absorbed at the cache layer. The DB only sees the initial miss. This pattern is called **cache-aside** and it's the most direct way to reduce DB load without scaling the DB itself.
+- **Scalability**: Because Redis is external and shared, it scales horizontally with the application. When you add a second API instance, it reads from the same Redis cache — cache hits from instance A are immediately usable by instance B. In-memory cache provides zero benefit when you add instances (each instance has its own empty cache on startup). Redis also supports clustering and replication natively, so the cache layer itself can scale independently of the API.
+- **In other projects**: Redis is used for session storage (stateless APIs sharing user sessions), rate limiting (distributed counters for API throttle), leaderboard/ranking (sorted sets), and pub/sub messaging. Any read-heavy system where the same data is read frequently by many users benefits from Redis in front of the primary data store.
+
+---
+
+## Outbox Pattern
+
+**Q: What problem does the Outbox pattern solve?**
+A: The current `PublishDomainEventsInterceptor` dispatches domain events immediately after `SaveChanges`. This creates a window for data loss: SaveChanges succeeds (DB write committed) → crash → domain event never dispatched. The order is placed in the DB but `OrderCreatedDomainEvent` never fires, so `OrderCreatedIntegrationEvent` never publishes, so no other module knows the order exists. The Outbox closes this window by making event publishing atomic with the DB write: instead of dispatching events immediately, the interceptor writes them as rows in an `outbox_messages` table in the same transaction. Even if the app crashes, the events are safely stored. A background worker reads and dispatches them later.
+
+**Q: How does the Outbox work step by step?**
+A:
+```
+[Request — same DB transaction]
+  1. SaveChanges() commits business data (e.g., new Order row)
+  2. Interceptor writes domain events to outbox_messages table
+     → { Id, Type, Content (JSON), OccurredAt, ProcessedAt = null }
+  Both steps are in the same transaction — they succeed or fail together.
+
+[Background worker — separate process loop]
+  3. Worker polls outbox_messages WHERE processed_at IS NULL
+  4. For each pending event: deserialize → dispatch to IEventPublisher
+  5. Mark as processed: SET processed_at = NOW()
+  6. If dispatch fails: leave processed_at as null → retried next poll
+```
+The guarantee: if the event row exists in the DB, it will eventually be dispatched. At-least-once delivery.
+
+**Q: What is "at-least-once delivery" and what does it mean for handlers?**
+A: At-least-once means an event may be dispatched more than once — if the worker dispatches successfully but crashes before marking `processed_at`, it will re-dispatch on the next poll. This means handlers must be **idempotent**: calling them multiple times with the same event produces the same result. In this codebase, `CreateCustomerCommandHandler` doing a duplicate `INSERT` would fail with a unique key violation. The fix: check if the customer already exists before inserting, and treat "already exists" as success rather than an error. Rule: every integration event handler must handle duplicate delivery gracefully.
+
+**Q: Why is the Outbox table per-module (e.g., `ticketing.outbox_messages`) instead of shared?**
+A: Module isolation. Each module has its own schema, its own DbContext, and its own transaction boundary. A shared outbox table would require cross-schema writes — coupling modules at the DB level. Each module's outbox is written in the same transaction as that module's business data, using that module's DbContext. The background worker for Ticketing only processes Ticketing's outbox. This mirrors the same "shared nothing" principle as the read models.
+
+**Q: Why does the background worker need to be careful about polling interval and locking?**
+A: If you run two API instances, both workers might poll and pick up the same unprocessed event simultaneously, dispatching it twice. The fix is database-level locking: use `SELECT FOR UPDATE SKIP LOCKED` when fetching rows — each worker locks the rows it's processing, and other workers skip them. This is the standard pattern for multi-instance outbox processing. The polling interval is a trade-off: too short wastes DB resources on empty polls, too long adds latency before events are dispatched. A common choice is 5–15 seconds.
+
+**Q: How does the Outbox change `PublishDomainEventsInterceptor`?**
+A: Instead of calling `IEventPublisher.PublishAsync(domainEvent)` directly, the interceptor serializes each domain event to JSON and writes an `OutboxMessage` row to the DB using the same `DbContext`. The immediate dispatch is completely removed from the interceptor — it becomes a pure "write to outbox" step. The `OutboxProcessor` background service then reads those rows and calls `IEventPublisher.PublishAsync`. The interface contract stays the same; only the timing changes from synchronous (within the request) to asynchronous (after the request, within seconds).
+
+**Q: How does the Outbox pattern improve performance, reliability, and scalability in this project and in general?**
+A:
+- **Performance — request latency**: Without the Outbox, the current interceptor dispatches domain events synchronously inside the request pipeline. If `OrderCreatedDomainEventHandler` triggers `CreateCustomerInAttendanceCommand` which writes to the DB, all of that happens before the HTTP response returns. The user waits for every downstream side-effect to complete. With the Outbox, the request writes its own data + outbox rows and returns immediately. Side-effects (integration events, downstream module updates) happen asynchronously in the background. The HTTP response is faster because it does less work per request.
+- **Reliability — no silent data loss**: Without the Outbox, a crash between `SaveChanges` and `PublishAsync` silently drops events. At scale this is not hypothetical — deploys, OOM kills, and network timeouts happen constantly. The Outbox makes event publishing durable: the event is committed to the DB in the same transaction as the business data. Even if the process crashes immediately after, the worker will pick it up on restart. This is the difference between "eventually consistent" and "randomly inconsistent".
+- **Scalability — background processing**: Moving event dispatch to a background worker means the request thread is freed faster. Under high load, shorter request durations mean fewer concurrent threads needed to serve the same throughput. The worker processes events at its own pace independently — if it falls behind, the outbox queue grows but the API continues accepting requests without degradation. This is the **load leveling** pattern.
+- **In other projects**: The Outbox is foundational in any system that writes to a database and publishes events. E-commerce (order placed → payment charged → inventory reserved), banking (transfer initiated → debit account → credit account → notify), and logistics (shipment created → notify carrier → update tracking) all require this guarantee. Without it, every one of these systems has a silent failure window. The Outbox eliminates that window with minimal complexity.
+
+---
+
+## RabbitMQ
+
+**Q: What is RabbitMQ and what problem does it solve?**
+A: RabbitMQ is a message broker — a server that accepts messages from publishers and routes them to consumers via queues. Right now, `IEventPublisher.PublishAsync(integrationEvent)` dispatches to `IEventHandler<T>` handlers in-process: the same process, same thread, same request scope. This means: (1) if the consuming module's handler throws, the publishing module's request fails, (2) all modules must be in the same process, (3) if a module is slow, it slows the publisher. RabbitMQ decouples them completely: the publisher puts a message on a queue and moves on. The consumer reads from its queue independently, at its own pace, in its own process if needed.
+
+**Q: What are exchanges, queues, and bindings in RabbitMQ?**
+A: Three concepts:
+- **Exchange**: receives messages from publishers and routes them. A `fanout` exchange sends every message to all bound queues. A `topic` exchange routes by pattern (e.g., `ticketing.*`). A `direct` exchange routes by exact key.
+- **Queue**: a buffer that stores messages until a consumer reads them. Each subscribing module has its own queue so it gets its own copy of every relevant message.
+- **Binding**: the rule that connects an exchange to a queue. "Route messages from the `events` exchange to the `ticketing.events` queue."
+
+In this project: when Events publishes `EventPublishedIntegrationEvent`, it sends to an exchange. Ticketing has a queue bound to that exchange — it receives its own copy. If we later add an Attendance module, it gets its own queue and its own copy, with zero changes to the Events module.
+
+**Q: How does RabbitMQ change the `IEventPublisher` implementation?**
+A: Currently `IEventPublisher` is implemented in-process — it calls `IEventHandler<T>` handlers registered in the same DI container. With RabbitMQ:
+- **Publishing side**: `IEventPublisher.PublishAsync(integrationEvent)` serializes the event to JSON and calls `IModel.BasicPublish` on the RabbitMQ channel. Done — no waiting for handlers.
+- **Consuming side**: Each module registers a `IHostedService` consumer that opens a RabbitMQ channel, binds to its queue, and calls `IEventHandler<T>` via `IMediator` when a message arrives.
+
+The key insight: `IEventPublisher` and `IEventHandler<T>` contracts don't change. Only the implementation of `IEventPublisher` changes (writes to broker instead of calling handlers directly), and a new consumer background service is added per module.
+
+**Q: What happens if a module's consumer is down when a message is published?**
+A: Messages sit in the queue until the consumer comes back up and reads them. This is the durability guarantee: as long as the queue is configured as `durable: true` and messages are published with `persistent: true`, RabbitMQ stores them to disk. When the consumer restarts, it processes all pending messages in order. This is fundamentally different from the current in-process model where a module crash means any events fired during that time are lost.
+
+**Q: What is a Dead Letter Queue (DLQ) and why do we need it?**
+A: When a consumer fails to process a message (handler throws, deserialization fails, etc.), RabbitMQ can move the message to a Dead Letter Queue instead of dropping it or blocking the main queue. The DLQ is a holding area for messages that couldn't be processed. An operator can inspect them, fix the bug, and re-publish them. Without a DLQ, a bad message can block the entire queue (if you keep retrying) or silently disappear (if you drop it). Both are worse than having a quarantine area.
+
+**Q: How does the Outbox interact with RabbitMQ?**
+A: The Outbox and RabbitMQ work together — they solve different problems at different points in the chain:
+```
+[DB transaction]
+  Business data + outbox_messages written atomically
+[Outbox processor — background service]
+  Reads outbox_messages → calls IEventPublisher.PublishAsync(integrationEvent)
+[RabbitMQ IEventPublisher]
+  Publishes to exchange → message sits in queue
+[Module consumer — background service]
+  Reads from queue → dispatches to IEventHandler<T> → marks message acknowledged
+```
+The Outbox guarantees the message reaches RabbitMQ. RabbitMQ guarantees the message reaches the consumer. Together they give you end-to-end reliability: no event is ever lost between DB write and handler execution, even across crashes and restarts.
+
+**Q: Why use RabbitMQ instead of just keeping the in-process publisher?**
+A: For a single-server modular monolith that never scales, the in-process publisher is actually fine — simpler and faster. RabbitMQ makes sense when: (1) you need modules to process events at different rates independently, (2) you want to extract a module into a separate service later (the consumer just connects to RabbitMQ from anywhere), (3) you need durability guarantees the in-process publisher can't give, (4) you want to replay events or inspect the message stream. In this project we add it now so the architecture is ready for those scenarios without a rewrite later.
+
+**Q: How does RabbitMQ improve performance, scalability, and resilience in this project and in general?**
+A:
+- **Performance — publisher throughput**: With the in-process publisher, publishing `OrderCreatedIntegrationEvent` blocks until every handler in every subscribing module completes. If the Attendance module's handler takes 200ms, every order placement takes at least 200ms extra. With RabbitMQ, publishing is fire-and-forget: serialize to JSON, write to RabbitMQ channel (~1ms network call), done. The publisher's throughput is limited only by the broker's ingestion rate, not by the slowest downstream consumer.
+- **Scalability — independent consumer scaling**: In-process consumers scale with the API — you can't scale the Ticketing consumer independently from the Events consumer. With RabbitMQ, each module's consumer is an independent `IHostedService`. If the Ticketing queue is falling behind during a ticket sale surge, you can add more Ticketing consumer instances without touching Events. Each consumer instance reads from the same queue, distributing the load. This is **horizontal consumer scaling** — impossible with in-process dispatch.
+- **Resilience — isolation of failure**: With in-process dispatch, if `EventCancelledIntegrationEventHandler` in Ticketing throws an unhandled exception, it propagates up through the publisher and can fail the original request in the Events module. Modules that aren't even the source of the failure take down the request. With RabbitMQ, a Ticketing consumer crash affects only Ticketing's queue processing — the Events module keeps running, keeps publishing, and Ticketing's queue accumulates until Ticketing recovers. Failures are **isolated by module boundary**.
+- **Back-pressure handling**: If a downstream module is slow, its queue grows. RabbitMQ provides visibility into queue depth (via management UI at `:15672`) so you can see which module is falling behind and respond — add consumers, optimize the handler, or throttle the publisher. In-process dispatch has no such signal; you only see it as high request latency.
+- **In other projects**: Any system with asymmetric processing speeds benefits from a broker. Video processing platforms (upload fast, encode slow), notification systems (API fast, email/SMS slow), financial systems (transaction fast, reconciliation slow) all use RabbitMQ or equivalent brokers to decouple the fast producer from the slow consumer. The broker is the buffer that absorbs the speed mismatch.
+- **Evently specifically**: When a popular event goes on sale and 10,000 orders are placed in 60 seconds, without RabbitMQ the Attendance module's handler runs synchronously inside each order request — 10,000 DB writes to `attendance.customers` in 60 seconds adds directly to order placement latency. With RabbitMQ, those 10,000 `OrderCreatedIntegrationEvent` messages queue up and Attendance processes them at whatever rate it can handle, independently, without slowing down order placement at all.
