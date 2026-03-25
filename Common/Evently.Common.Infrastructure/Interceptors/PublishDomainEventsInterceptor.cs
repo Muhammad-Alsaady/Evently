@@ -1,45 +1,46 @@
+using System.Text.Json;
+using Evently.Common.Domain;
+using Evently.Common.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
-using Evently.Common.Domain;
-using Evently.Common.Domain.Events;
 
 namespace Evently.Common.Infrastructure.Interceptors;
 
-public sealed class PublishDomainEventsInterceptor(IServiceScopeFactory serviceScopeFactory) : SaveChangesInterceptor
+public sealed class PublishDomainEventsInterceptor : SaveChangesInterceptor
 {
-	public override async ValueTask<int> SavedChangesAsync(
-		  SaveChangesCompletedEventData eventData,
-		  int result,
-		  CancellationToken cancellationToken = default)
-	{
-		if(eventData.Context is not null)
-		{
-			await PublishDomainEventsAsync(eventData.Context, cancellationToken);
-		}
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        if (eventData.Context is not null)
+        {
+            InsertOutboxMessages(eventData.Context);
+        }
 
-		return await base.SavedChangesAsync(eventData, result, cancellationToken);
-	}
+        return new ValueTask<InterceptionResult<int>>(result);
+    }
 
-	private async Task PublishDomainEventsAsync(DbContext context, CancellationToken cancellationToken)
-	{
-		var domainEvents = context.ChangeTracker
-			.Entries<Entity>()
-			.Select(e => e.Entity)
-			.SelectMany(e =>
-			{
-				var events = e.DomainEvents.ToList();
-				e.ClearDomainEvents();
-				return events;
-			})
-			.ToList();
+    private static void InsertOutboxMessages(DbContext context)
+    {
+        var outboxMessages = context.ChangeTracker
+            .Entries<Entity>()
+            .Select(e => e.Entity)
+            .SelectMany(e =>
+            {
+                var events = e.DomainEvents.ToList();
+                e.ClearDomainEvents();
+                return events;
+            })
+            .Select(domainEvent => new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                Type = domainEvent.GetType().AssemblyQualifiedName!,
+                Content = JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                OccurredOnUtc = DateTime.UtcNow
+            })
+            .ToList();
 
-		using var scope = serviceScopeFactory.CreateScope();
-		var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
-
-		foreach (var domainEvent in domainEvents)
-		{
-			await eventPublisher.PublishAsync((dynamic)domainEvent, cancellationToken);
-		}
-	}
+        context.Set<OutboxMessage>().AddRange(outboxMessages);
+    }
 }
