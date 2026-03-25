@@ -3,6 +3,7 @@ using Evently.Common.Application.Extensions;
 using Evently.Common.Domain.Events;
 using Evently.Common.Infrastructure.Database;
 using Evently.Common.Infrastructure.Interceptors;
+using Evently.Common.Infrastructure.Outbox;
 using Evently.Modules.Ticketing.Application;
 using Evently.Modules.Ticketing.Application.Abstractions.Data;
 using Evently.Modules.Ticketing.Domain.Customers;
@@ -64,6 +65,7 @@ public static class TicketingModuleExtensions
         });
 
         services.AddScoped<IModuleDatabaseMigrator, TicketingDatabaseMigrator>();
+        services.AddHostedService<OutboxProcessor<TicketingDbContext>>();
     }
 
     private static void AddRepositories(this IServiceCollection services)

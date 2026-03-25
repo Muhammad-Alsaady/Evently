@@ -6,6 +6,7 @@ using Evently.Common.Application;
 using Evently.Common.Domain.Events;
 using Evently.Common.Infrastructure.Database;
 using Evently.Common.Infrastructure.Interceptors;
+using Evently.Common.Infrastructure.Outbox;
 using Evently.Modules.Events.Application;
 using Evently.Modules.Events.Application.Abstractions.Data;
 using Evently.Modules.Events.Domain.Categories;
@@ -64,6 +65,7 @@ public static class EventsModuleExtensions
         });
 
         services.AddScoped<IModuleDatabaseMigrator, EventsDatabaseMigrator>();
+        services.AddHostedService<OutboxProcessor<EventsDbContext>>();
     }
 
     private static void AddRepositories(this IServiceCollection services)
