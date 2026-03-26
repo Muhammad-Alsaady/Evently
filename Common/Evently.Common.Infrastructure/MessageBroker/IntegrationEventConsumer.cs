@@ -87,6 +87,13 @@ public sealed class IntegrationEventConsumer<TModule>(
 		await channel.BasicConsumeAsync(options.Value.QueueName, autoAck: false, consumer: consumer,
 			cancellationToken: stoppingToken);
 
-		await Task.Delay(Timeout.Infinite, stoppingToken);
+		try
+		{
+			await Task.Delay(Timeout.Infinite, stoppingToken);
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected on graceful shutdown — host cancelled the token
+		}
 	}
 }

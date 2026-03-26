@@ -66,6 +66,7 @@ services:
     container_name: seq
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=admin123!
     volumes:
       - ./docker_data/seq:/data
     ports:
@@ -83,6 +84,18 @@ services:
       - "4317:4317"
       - "4318:4318"
       - "16686:16686"
+    networks:
+      - evently-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@evently.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123!
+    ports:
+      - "5050:80"
+    restart: always
     networks:
       - evently-network
 
