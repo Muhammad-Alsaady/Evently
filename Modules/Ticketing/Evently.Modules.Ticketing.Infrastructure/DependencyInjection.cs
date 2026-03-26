@@ -3,7 +3,9 @@ using Evently.Common.Application.Extensions;
 using Evently.Common.Domain.Events;
 using Evently.Common.Infrastructure.Database;
 using Evently.Common.Infrastructure.Interceptors;
+using Evently.Common.Infrastructure.MessageBroker;
 using Evently.Common.Infrastructure.Outbox;
+using Evently.Modules.Events.PublicApi;
 using Evently.Modules.Ticketing.Application;
 using Evently.Modules.Ticketing.Application.Abstractions.Data;
 using Evently.Modules.Ticketing.Domain.Customers;
@@ -13,6 +15,7 @@ using Evently.Modules.Ticketing.Domain.TicketTypes;
 using Evently.Modules.Ticketing.Infrastructure.Database;
 using Evently.Modules.Ticketing.Infrastructure.EventHandlers;
 using Evently.Modules.Ticketing.Infrastructure.Implementations;
+using Evently.Modules.Users.PublicApi;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -44,7 +47,20 @@ public static class TicketingModuleExtensions
 
         // Integration event handlers live in Infrastructure — scan them separately
         services.RegisterHandlersFromAssemblyContaining(typeof(EventPublishedIntegrationEventHandler));
-    }
+		services.Configure<IntegrationEventConsumerOptions<AssemblyReference>>(
+		  o =>
+		  {
+			  o.QueueName = "ticketing";
+			  o.IntegrationEventTypes =
+			  [
+				  typeof(EventPublishedIntegrationEvent),
+				  typeof(EventCancelledIntegrationEvent),
+				  typeof(UserRegisteredIntegrationEvent)
+			  ];
+		  });
+		services.AddHostedService<IntegrationEventConsumer<AssemblyReference>>(
+		);
+	}
 
     private static void AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {

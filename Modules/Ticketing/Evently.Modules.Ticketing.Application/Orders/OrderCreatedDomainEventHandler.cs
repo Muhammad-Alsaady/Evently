@@ -1,3 +1,4 @@
+using Evently.Common.Application.Messaging;
 using Evently.Common.Domain.Events;
 using Evently.Modules.Ticketing.Domain.Orders;
 using Evently.Modules.Ticketing.PublicApi;
@@ -6,7 +7,7 @@ namespace Evently.Modules.Ticketing.Application.Orders;
 
 internal sealed class OrderCreatedDomainEventHandler(
 	IOrderRepository orderRepository,
-	IEventPublisher eventPublisher) : IEventHandler<OrderCreatedDomainEvent>
+	IIntegrationEventPublisher eventPublisher) : IEventHandler<OrderCreatedDomainEvent>
 {
 	public async Task HandleAsync(OrderCreatedDomainEvent domainEvent, CancellationToken cancellationToken)
 	{

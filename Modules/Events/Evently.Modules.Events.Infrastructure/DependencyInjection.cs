@@ -1,11 +1,8 @@
-using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Waseet.CQRS.Extensions;
 using Evently.Common.Application;
 using Evently.Common.Domain.Events;
 using Evently.Common.Infrastructure.Database;
 using Evently.Common.Infrastructure.Interceptors;
+using Evently.Common.Infrastructure.MessageBroker;
 using Evently.Common.Infrastructure.Outbox;
 using Evently.Modules.Events.Application;
 using Evently.Modules.Events.Application.Abstractions.Data;
@@ -16,6 +13,10 @@ using Evently.Modules.Events.Infrastructure.Database;
 using Evently.Modules.Events.Infrastructure.Implementations;
 using Evently.Modules.Events.Infrastructure.PublicApi;
 using Evently.Modules.Events.PublicApi;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Waseet.CQRS.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -75,5 +76,5 @@ public static class EventsModuleExtensions
         services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEventsApi, EventsApi>();
-    }
+	}
 }

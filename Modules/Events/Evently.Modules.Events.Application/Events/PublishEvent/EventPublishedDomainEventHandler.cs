@@ -1,3 +1,4 @@
+using Evently.Common.Application.Messaging;
 using Evently.Common.Domain.Events;
 using Evently.Modules.Events.Domain.Events;
 using Evently.Modules.Events.Domain.TicketTypes;
@@ -8,7 +9,7 @@ namespace Evently.Modules.Events.Application.Events.PublishEvent;
 internal sealed class EventPublishedDomainEventHandler(
     IEventRepository eventRepository,
     ITicketTypeRepository ticketTypeRepository,
-    IEventPublisher eventPublisher) : IEventHandler<EventPublishedDomainEvent>
+	IIntegrationEventPublisher eventPublisher) : IEventHandler<EventPublishedDomainEvent>
 {
     public async Task HandleAsync(EventPublishedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
