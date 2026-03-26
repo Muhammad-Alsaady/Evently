@@ -1,7 +1,9 @@
 using System.Text;
 using Evently.Common.Application.Caching;
 using Evently.Common.Application.Data;
+using Evently.Common.Application.Messaging;
 using Evently.Common.Infrastructure.Caching;
+using Evently.Common.Infrastructure.MessageBroker;
 using Evently.Common.Infrastructure.Configuration;
 using Evently.Common.Infrastructure.Data;
 using Evently.Common.Infrastructure.Policies;
@@ -13,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using RabbitMQ.Client;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -31,8 +34,10 @@ public static class DependencyInjection
         services.AddJwtAuthentication(configuration);
         services.AddClaimsAuthorization();
         services.AddDbConnectionFactory(configuration);
+		services.AddMessageBroker(configuration);
 
-        return services;
+
+		return services;
     }
 
     private static IServiceCollection AddHostOpenTelemetry(
@@ -115,6 +120,24 @@ public static class DependencyInjection
 			?? throw new InvalidOperationException("Database connection string 'Database' is not configured.");
 
 		services.AddSingleton<IDbConnectionFactory>(_ => new DbConnectionFactory(connectionString));
+
+		return services;
+	}
+
+	private static IServiceCollection AddMessageBroker(
+	 this IServiceCollection services,
+	 IConfiguration configuration)
+	{
+		var connectionString = configuration.GetConnectionString("MessageBroker")
+			?? throw new InvalidOperationException("Connection string 'MessageBroker' is not configured.");
+
+		services.AddSingleton<IConnection>(_ =>
+		{
+			var factory = new ConnectionFactory { Uri = new Uri(connectionString) };
+			return factory.CreateConnectionAsync().GetAwaiter().GetResult();
+		});
+
+		services.AddScoped<IIntegrationEventPublisher, RabbitMqIntegrationEventPublisher>();
 
 		return services;
 	}

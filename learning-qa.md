@@ -438,3 +438,58 @@ A:
 - **Back-pressure handling**: If a downstream module is slow, its queue grows. RabbitMQ provides visibility into queue depth (via management UI at `:15672`) so you can see which module is falling behind and respond — add consumers, optimize the handler, or throttle the publisher. In-process dispatch has no such signal; you only see it as high request latency.
 - **In other projects**: Any system with asymmetric processing speeds benefits from a broker. Video processing platforms (upload fast, encode slow), notification systems (API fast, email/SMS slow), financial systems (transaction fast, reconciliation slow) all use RabbitMQ or equivalent brokers to decouple the fast producer from the slow consumer. The broker is the buffer that absorbs the speed mismatch.
 - **Evently specifically**: When a popular event goes on sale and 10,000 orders are placed in 60 seconds, without RabbitMQ the Attendance module's handler runs synchronously inside each order request — 10,000 DB writes to `attendance.customers` in 60 seconds adds directly to order placement latency. With RabbitMQ, those 10,000 `OrderCreatedIntegrationEvent` messages queue up and Attendance processes them at whatever rate it can handle, independently, without slowing down order placement at all.
+
+---
+
+## Outbox vs RabbitMQ — Do you need both?
+
+**Q: Is the Outbox Pattern alone enough? Why add RabbitMQ at all?**
+A: It depends on what you're solving. They solve completely different problems and operate at different points in the chain.
+
+The Outbox solves **reliable event persistence** — it answers: "how do I guarantee the event is not lost if the app crashes after SaveChanges but before publishing?" Answer: write it to the DB in the same transaction. The event survives any crash because it's in the DB.
+
+RabbitMQ solves **cross-process, asynchronous, durable message delivery** — it answers: "how do I get an event from one process (or module) to another process reliably and at scale?"
+
+They are not alternatives. They are complements:
+- Outbox guarantees the event reaches the broker.
+- RabbitMQ guarantees the event reaches the consumer.
+
+**Q: For a single-instance modular monolith, is Outbox + in-process IEventPublisher sufficient?**
+A: Yes — completely. If you run one instance of Evently, never extract a module, and don't need independent consumer scaling, the Outbox + in-process `IEventPublisher` gives you:
+- Atomicity: event stored with business data ✓
+- Reliability: event survives app crash ✓
+- Delivery: OutboxProcessor dispatches to in-process handlers ✓
+
+What you don't get: cross-process delivery, independent scaling per module, queue depth visibility, temporal decoupling. For a single-instance monolith those don't matter.
+
+**Q: When does adding RabbitMQ actually become necessary?**
+A: Four scenarios:
+
+1. **Horizontal scaling** — you run 2+ instances of Evently behind a load balancer. An in-process handler only runs inside the process that received the request. If Instance A processes the order, Instance B's Ticketing handler never sees the event. With RabbitMQ, both instances connect to the same queue — whichever instance picks up the message processes it. This is the most common real-world trigger.
+
+2. **Module extraction** — you decide to split the Ticketing module into its own service. In-process dispatch breaks immediately — there's no shared memory. With RabbitMQ already in place, Ticketing just runs its consumer against the same broker from a different process. Zero changes to the Events module.
+
+3. **Consumer speed mismatch** — the Events module fires 1,000 `EventPublishedIntegrationEvent`s per minute, but the Ticketing handler takes 200ms each (= max 300/min). In-process: every Events publish blocks waiting for Ticketing. With RabbitMQ: Events publishes fire instantly, Ticketing's queue grows and drains at its own rate, and you add more Ticketing consumer instances if needed.
+
+4. **Operational visibility** — you want to see queue depth, message rates, consumer lag, DLQs in the RabbitMQ management UI. In-process dispatch is invisible — you have no idea how many events are backed up or whether handlers are failing.
+
+**Q: In Evently specifically, which events need RabbitMQ and which don't?**
+A:
+- **Domain events** (e.g., `OrderCreatedDomainEvent`) — always in-process. They are raised inside one module's aggregate and consumed by handlers in the same module. RabbitMQ adds zero value here.
+- **Integration events** (e.g., `OrderCreatedIntegrationEvent`, `EventPublishedIntegrationEvent`) — these cross module boundaries. They are the candidates for RabbitMQ, because they need to reach a different module which may be in a different process, scaling independently.
+
+So the rule is: **domain events = in-process, integration events = RabbitMQ**.
+
+**Q: Summary — Outbox vs RabbitMQ responsibility table**
+A:
+| Concern | Outbox | RabbitMQ |
+|---|---|---|
+| Survive app crash before publish | ✓ | ✗ |
+| Atomic write with business data | ✓ | ✗ |
+| Cross-process delivery | ✗ | ✓ |
+| Independent consumer scaling | ✗ | ✓ |
+| Message durability across restarts | ✗ (DB) | ✓ (durable queue) |
+| Dead letter / retry | ✗ | ✓ |
+| Queue depth visibility | ✗ | ✓ |
+| Required for single-instance monolith | ✓ | ✗ (optional) |
+| Required for multi-instance / extraction | ✓ | ✓ |
