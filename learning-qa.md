@@ -493,3 +493,72 @@ A:
 | Queue depth visibility | ✗ | ✓ |
 | Required for single-instance monolith | ✓ | ✗ (optional) |
 | Required for multi-instance / extraction | ✓ | ✓ |
+
+---
+
+## Inbox Pattern
+
+**Q: What is the Inbox Pattern and what problem does it solve?**
+A: The Outbox guarantees a message reliably *leaves* your service. The Inbox guarantees a message is processed *exactly once* on the receiving side. RabbitMQ guarantees at-least-once delivery — the same message can arrive twice (network glitch, consumer restart mid-ack, broker retry). Without an inbox, your handler runs twice: two rows inserted, two emails sent, two charges processed. The Inbox solves this by recording each processed message ID in a DB table before handling it. If the same ID arrives again, you detect the duplicate and skip.
+
+**Q: How does the Inbox Pattern work mechanically?**
+A: When a message arrives at the consumer, before calling any handler:
+1. Try to insert `(MessageId, ReceivedAt)` into `inbox_messages` with a unique constraint on `MessageId`
+2. If insert succeeds → message is new → process it normally → mark as processed
+3. If insert throws a unique constraint violation → duplicate → ack to RabbitMQ and return without processing
+
+This works because the insert and the handler run in the same DB transaction. If the handler fails, the insert rolls back too — so the next delivery attempt will process it again correctly.
+
+**Q: What's the difference between Inbox and `[Idempotent]` from Waseet.CQRS?**
+A: `[Idempotent]` protects HTTP command handlers — it stores command IDs in a cache and skips duplicate HTTP requests. The Inbox protects RabbitMQ message consumers — it stores message broker delivery IDs in the DB and skips duplicate deliveries. They solve the same problem (at-most-once execution) at different entry points. You need both if you have both HTTP commands and message consumers.
+
+**Q: Do we have the Inbox Pattern in Evently currently?**
+A: No. Our `IntegrationEventConsumer` has no duplicate detection. If RabbitMQ re-delivers a message, the handler runs twice. For most handlers in Evently this causes a duplicate row error (e.g., inserting a customer that already exists) which would throw and nack the message — effectively preventing double-processing. But that's accidental safety, not intentional design. A proper Inbox would handle it cleanly without relying on DB constraints as a side effect.
+
+**Q: How would you add an Inbox to Evently?**
+A: Add `inbox_messages` table per module (same approach as `outbox_messages`). In `IntegrationEventConsumer.ReceivedAsync`, wrap the handler call in a scope that first tries to insert `(ea.BasicProperties.MessageId, DateTime.UtcNow)` into the module's inbox table. Use the same DbContext transaction so the inbox insert and the handler's DB writes commit atomically. If insert fails with unique violation → ack and return. This ensures exactly-once processing even with RabbitMQ re-deliveries.
+
+---
+
+## Saga Pattern
+
+**Q: What is the Saga Pattern and what problem does it solve?**
+A: A Saga coordinates a multi-step business process that spans multiple modules or services, where each step can fail and needs to be undone (compensated) if a later step fails. The core problem: you can't use a single DB transaction across two services. If step 1 commits in Service A and step 2 fails in Service B, there's no `ROLLBACK` that crosses service boundaries. A Saga handles this by defining explicit compensation actions — if step 2 fails, run `CompensateStep1`.
+
+**Q: What are the two styles of Saga?**
+A:
+- **Choreography**: no central coordinator. Each service publishes events and other services react to them. The flow emerges from the event chain. Simple to implement, hard to debug when something goes wrong — you have to trace events across services to understand what happened. This is what Evently uses now.
+- **Orchestration**: a central Saga orchestrator (a class or service) explicitly tells each participant what to do and listens for responses. Easier to reason about and debug, but introduces a central coordinator that becomes a coupling point. MassTransit's `StateMachine` and NServiceBus's `Saga` are orchestration-based.
+
+**Q: What would a Saga look like in Evently if we added a Payments module?**
+A:
+```
+[CreateOrder Saga — Choreography]
+
+Step 1: Ticketing creates order → publishes OrderCreatedIntegrationEvent
+Step 2: Payments receives event → charges card → publishes PaymentProcessedEvent
+         OR: charge fails → publishes PaymentFailedIntegrationEvent
+Step 3a (success): Ticketing receives PaymentProcessed → confirms order
+Step 3b (failure): Ticketing receives PaymentFailed → cancels order (compensation)
+                   Payments receives OrderCancelled → refunds if partially charged
+```
+Each compensation is a regular command triggered by a failure event. There's no magic — just more event handlers.
+
+**Q: When do you need a Saga vs just chaining events?**
+A: You need a Saga when:
+1. A multi-step process has **compensating actions** — if later steps fail, earlier steps must be undone
+2. The process spans **multiple services/modules** — no shared transaction
+3. The process has **state that needs tracking** — "are we in step 2 or step 3?" — especially in orchestration style where the Saga tracks its own state machine
+
+If your process is fire-and-forget (event published, other module reacts, no compensation needed), plain event chaining is sufficient. Our current `OrderCreated → CreateCustomer in Ticketing` is not a Saga — if it fails, nothing needs to be compensated in the Ticketing side.
+
+**Q: Do we need a Saga in Evently currently?**
+A: No. The current modules (Events, Ticketing, Users) don't have multi-step processes that require compensation. The moment you add: payments that need refunds on order cancellation, ticket reservations that expire if payment doesn't arrive in time, or inventory locks that must be released on failure — that's when you introduce a Saga. The choreography foundation is already in place (events + handlers). You'd add compensation handlers to complete the pattern.
+
+**Q: How does Inbox + Outbox + Saga relate to each other?**
+A:
+- **Outbox**: guarantees your event *leaves* your service even if the app crashes
+- **Inbox**: guarantees the event is processed *exactly once* on the receiving side
+- **Saga**: coordinates *what* happens across multiple steps and handles failures
+
+In a production system with Sagas, you typically need all three: Outbox so Saga steps publish reliably, Inbox so compensation handlers don't run twice, and the Saga itself to define the process and its failure paths. They're complementary layers of reliability, not alternatives.
