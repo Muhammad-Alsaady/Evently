@@ -11,7 +11,7 @@ internal sealed class PublishEventEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPut("events/{id:guid}/publish", Handle);
+        app.MapPut("events/{id:guid}/publish", Handle).WithTags("Events");
     }
 
     private static async Task<IResult> Handle(

@@ -16,6 +16,7 @@ public class UpdateUserRoleEndpoint : IApiEndpoint
     public void MapEndpoint(WebApplication app)
     {
         app.MapPost(RouteConsts.UpdateUserRole, Handle)
+            .WithTags("Users")
             .RequireAuthorization(UserPolicyConsts.UpdatePolicy);
     }
 

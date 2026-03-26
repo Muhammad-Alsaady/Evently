@@ -11,7 +11,7 @@ internal sealed class CreateOrderEndpoint : IApiEndpoint
 {
 	public void MapEndpoint(WebApplication app)
 	{
-		app.MapPost("ticketing/orders", Handle);
+		app.MapPost("ticketing/orders", Handle).WithTags("Orders");
 	}
 
 	private static async Task<IResult> Handle(

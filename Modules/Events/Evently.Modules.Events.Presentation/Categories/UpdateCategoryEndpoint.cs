@@ -11,7 +11,7 @@ internal sealed class UpdateCategoryEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPut("events/categories/{id:guid}", Handle);
+        app.MapPut("events/categories/{id:guid}", Handle).WithTags("Categories");
     }
 
     private static async Task<IResult> Handle(

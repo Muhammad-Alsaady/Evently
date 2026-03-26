@@ -11,7 +11,7 @@ internal sealed class GetAttendeeEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("attendance/attendees/{attendeeId:guid}", Handle);
+        app.MapGet("attendance/attendees/{attendeeId:guid}", Handle).WithTags("Attendance");
     }
 
     private static async Task<IResult> Handle(

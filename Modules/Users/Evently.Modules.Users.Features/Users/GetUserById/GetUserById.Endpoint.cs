@@ -12,6 +12,7 @@ public class GetUserByIdEndpoint : IApiEndpoint
     public void MapEndpoint(WebApplication app)
     {
         app.MapGet(RouteConsts.GetById, Handle)
+            .WithTags("Users")
             .RequireAuthorization(UserPolicyConsts.ReadPolicy);
     }
 

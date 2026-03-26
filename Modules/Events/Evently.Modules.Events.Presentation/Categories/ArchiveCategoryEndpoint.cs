@@ -11,7 +11,7 @@ internal sealed class ArchiveCategoryEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapDelete("events/categories/{id:guid}", Handle);
+        app.MapDelete("events/categories/{id:guid}", Handle).WithTags("Categories");
     }
 
     private static async Task<IResult> Handle(

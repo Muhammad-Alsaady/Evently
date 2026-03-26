@@ -14,7 +14,7 @@ public class RegisterUserEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost(RouteConsts.Register, Handle);
+        app.MapPost(RouteConsts.Register, Handle).WithTags("Users");
     }
 
     private static async Task<IResult> Handle(

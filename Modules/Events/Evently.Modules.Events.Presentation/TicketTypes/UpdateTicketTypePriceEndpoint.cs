@@ -11,7 +11,7 @@ internal sealed class UpdateTicketTypePriceEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPut("events/ticket-types/{id:guid}/price", Handle);
+        app.MapPut("events/ticket-types/{id:guid}/price", Handle).WithTags("Ticket Types");
     }
 
     private static async Task<IResult> Handle(

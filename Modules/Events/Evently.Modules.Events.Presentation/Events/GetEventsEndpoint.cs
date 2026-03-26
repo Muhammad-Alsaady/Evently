@@ -11,7 +11,7 @@ internal sealed class GetEventsEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("events", Handle);
+        app.MapGet("events", Handle).WithTags("Events");
     }
 
     private static async Task<IResult> Handle(

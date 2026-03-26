@@ -14,7 +14,7 @@ public class LoginUserEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost(RouteConsts.Login, Handle);
+        app.MapPost(RouteConsts.Login, Handle).WithTags("Users");
     }
 
     private static async Task<IResult> Handle(

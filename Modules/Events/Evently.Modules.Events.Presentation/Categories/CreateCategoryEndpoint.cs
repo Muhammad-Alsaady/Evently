@@ -11,7 +11,7 @@ internal sealed class CreateCategoryEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost("events/categories", Handle);
+        app.MapPost("events/categories", Handle).WithTags("Categories");
     }
 
     private static async Task<IResult> Handle(

@@ -11,7 +11,7 @@ internal sealed class CreateTicketTypeEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost("events/{eventId:guid}/ticket-types", Handle);
+        app.MapPost("events/{eventId:guid}/ticket-types", Handle).WithTags("Ticket Types");
     }
 
     private static async Task<IResult> Handle(

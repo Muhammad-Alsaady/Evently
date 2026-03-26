@@ -11,7 +11,7 @@ internal sealed class RescheduleEventEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPut("events/{id:guid}/reschedule", Handle);
+        app.MapPut("events/{id:guid}/reschedule", Handle).WithTags("Events");
     }
 
     private static async Task<IResult> Handle(

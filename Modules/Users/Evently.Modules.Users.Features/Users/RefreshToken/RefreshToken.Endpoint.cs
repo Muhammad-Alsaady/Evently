@@ -14,7 +14,7 @@ public class RefreshTokenEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost(RouteConsts.RefreshToken, Handle);
+        app.MapPost(RouteConsts.RefreshToken, Handle).WithTags("Users");
     }
 
     private static async Task<IResult> Handle(

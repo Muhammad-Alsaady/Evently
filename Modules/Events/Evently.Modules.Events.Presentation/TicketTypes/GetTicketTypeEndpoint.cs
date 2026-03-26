@@ -11,7 +11,7 @@ internal sealed class GetTicketTypeEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("events/ticket-types/{id:guid}", Handle);
+        app.MapGet("events/ticket-types/{id:guid}", Handle).WithTags("Ticket Types");
     }
 
     private static async Task<IResult> Handle(

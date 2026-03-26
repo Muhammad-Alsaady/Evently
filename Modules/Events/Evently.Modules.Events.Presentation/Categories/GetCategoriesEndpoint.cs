@@ -11,7 +11,7 @@ internal sealed class GetCategoriesEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("events/categories", Handle);
+        app.MapGet("events/categories", Handle).WithTags("Categories");
     }
 
     private static async Task<IResult> Handle(

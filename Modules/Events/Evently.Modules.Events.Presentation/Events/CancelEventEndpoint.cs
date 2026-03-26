@@ -11,7 +11,7 @@ internal sealed class CancelEventEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPut("events/{id:guid}/cancel", Handle);
+        app.MapPut("events/{id:guid}/cancel", Handle).WithTags("Events");
     }
 
     private static async Task<IResult> Handle(

@@ -11,7 +11,7 @@ internal sealed class GetAttendeesEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapGet("attendance/attendees", Handle);
+        app.MapGet("attendance/attendees", Handle).WithTags("Attendance");
     }
 
     private static async Task<IResult> Handle(

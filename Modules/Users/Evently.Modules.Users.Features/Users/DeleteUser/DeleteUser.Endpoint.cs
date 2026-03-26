@@ -12,6 +12,7 @@ public class DeleteUserEndpoint : IApiEndpoint
     public void MapEndpoint(WebApplication app)
     {
         app.MapDelete(RouteConsts.DeleteUser, Handle)
+            .WithTags("Users")
             .RequireAuthorization(UserPolicyConsts.DeletePolicy);
     }
 

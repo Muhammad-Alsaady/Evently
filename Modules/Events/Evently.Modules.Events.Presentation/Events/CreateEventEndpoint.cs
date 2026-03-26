@@ -11,7 +11,7 @@ internal sealed class CreateEventEndpoint : IApiEndpoint
 {
     public void MapEndpoint(WebApplication app)
     {
-        app.MapPost("events", Handle);
+        app.MapPost("events", Handle).WithTags("Events");
     }
 
     private static async Task<IResult> Handle(
