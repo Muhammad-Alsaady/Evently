@@ -19,13 +19,12 @@ internal sealed class GetEventQueryHandler(IDbConnectionFactory dbConnectionFact
             SELECT
                 e.id, e.category_id AS CategoryId, e.title, e.description,
                 e.location, e.status, e.starts_at_utc AS StartsAtUtc, e.ends_at_utc AS EndsAtUtc,
-                tt.id, tt.name, tt.price, tt.quantity
+                tt.id AS TicketTypeId, tt.name, tt.price, tt.quantity
             FROM events.events e
             LEFT JOIN events.ticket_types tt ON tt.event_id = e.id
             WHERE e.id = @EventId
             """;
 
-        // Dapper multi-mapping: one row per ticket type, aggregate into single EventResponse
         Dictionary<Guid, EventResponse> eventDictionary = [];
 
         await connection.QueryAsync<EventResponse, TicketTypeResponse, EventResponse>(
@@ -34,23 +33,27 @@ internal sealed class GetEventQueryHandler(IDbConnectionFactory dbConnectionFact
             {
                 if (!eventDictionary.TryGetValue(eventRow.Id, out EventResponse? existingEvent))
                 {
-                    existingEvent = eventRow with { TicketTypes = [] };
+                    existingEvent = eventRow with { TicketTypes = new List<TicketTypeResponse>() };
                     eventDictionary[eventRow.Id] = existingEvent;
                 }
 
                 if (ticketType is not null)
-                    ((List<TicketTypeResponse>)existingEvent.TicketTypes).Add(ticketType);
+				{
+					((List<TicketTypeResponse>)existingEvent.TicketTypes).Add(ticketType);
+				}
 
-                return existingEvent;
+				return existingEvent;
             },
             new { query.EventId },
-            splitOn: "id");
+            splitOn: "TicketTypeId");
 
         EventResponse? result = eventDictionary.Values.SingleOrDefault();
 
         if (result is null)
-            return Error.NotFound("Events.NotFound", $"Event with ID '{query.EventId}' was not found.");
+		{
+			return Error.NotFound("Events.NotFound", $"Event with ID '{query.EventId}' was not found.");
+		}
 
-        return result;
+		return result;
     }
 }

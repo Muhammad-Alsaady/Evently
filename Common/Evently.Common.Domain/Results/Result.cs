@@ -66,7 +66,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     /// <summary>
     /// Gets a value indicating whether the state is error.
     /// </summary>
-    public bool IsError => Errors.Count > 0;
+    public bool IsError => !IsSuccess;
 
     /// <summary>
     /// Gets the collection of errors.

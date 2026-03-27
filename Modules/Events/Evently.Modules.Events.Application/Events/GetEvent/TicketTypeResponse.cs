@@ -1,3 +1,3 @@
 namespace Evently.Modules.Events.Application.Events.GetEvent;
 
-public sealed record TicketTypeResponse(Guid Id, string Name, decimal Price, int Quantity);
+public sealed record TicketTypeResponse(Guid TicketTypeId, string Name, decimal Price, int Quantity);

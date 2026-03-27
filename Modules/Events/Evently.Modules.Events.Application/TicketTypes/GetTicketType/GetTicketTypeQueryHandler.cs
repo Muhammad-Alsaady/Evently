@@ -16,7 +16,7 @@ internal sealed class GetTicketTypeQueryHandler(IDbConnectionFactory dbConnectio
 
         const string sql =
             """
-            SELECT id, event_id AS EventId, name, price, quantity
+            SELECT id AS TicketTypeId, event_id AS EventId, name, price, quantity
             FROM events.ticket_types
             WHERE id = @TicketTypeId
             """;
